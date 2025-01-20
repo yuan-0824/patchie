@@ -1,0 +1,408 @@
+<!DOCTYPE html>
+<html lang="zh-cn">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>拼豆豆像素点生成器</title>
+    <style>
+        body {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 10px;
+            font-family: Arial, sans-serif;
+            background-color: #f0f2f5;
+            color: #333;
+        }
+        .container {
+            background: white;
+            padding: 20px;
+            border-radius: 16px;
+            box-shadow: 0 4px 24px rgba(0,0,0,0.08);
+        }
+        h1 {
+            font-size: 1.8em;
+            margin-bottom: 20px;
+        }
+        .upload-container {
+            position: relative;
+            text-align: center;
+            padding: 30px;
+            border: 2px dashed #ddd;
+            border-radius: 12px;
+            background: #fafafa;
+            transition: all 0.3s ease;
+        }
+        .upload-container.drag-over {
+            border-color: #1890ff;
+            background: #f0f7ff;
+        }
+        .upload-text {
+            margin-top: 10px;
+            color: #666;
+        }
+        .controls {
+            margin: 15px 0;
+            padding: 15px;
+            gap: 20px;
+        }
+        .control-group {
+            flex: 1;
+            min-width: 250px;
+        }
+        .control-group label {
+            display: block;
+            margin-bottom: 12px;
+            color: #333;
+            font-weight: 600;
+            font-size: 1.1em;
+        }
+        input[type="number"], select.select {
+            width: 100%;
+            padding: 12px;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            font-size: 1em;
+            transition: all 0.3s ease;
+            background: white;
+        }
+        input[type="number"]:focus, select.select:focus {
+            border-color: #1890ff;
+            box-shadow: 0 0 0 2px rgba(24,144,255,0.1);
+            outline: none;
+        }
+        .result-container {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 30px;
+            margin-top: 30px;
+        }
+        @media (max-width: 768px) {
+            body {
+                padding: 5px;
+            }
+            .container {
+                padding: 15px;
+            }
+            h1 {
+                font-size: 1.5em;
+            }
+            .controls {
+                padding: 10px;
+            }
+            .control-group {
+                min-width: 100%;
+            }
+            .result-container {
+                grid-template-columns: 1fr;
+            }
+            #output {
+                font-size: 14px;
+                padding: 15px;
+            }
+            .disclaimer {
+                font-size: 0.8em;
+                padding: 10px;
+            }
+        }
+        #output {
+            line-height: 1;
+            letter-spacing: 0;
+            font-size: 16px;
+            white-space: pre;
+            background: white;
+            padding: 25px;
+            border-radius: 12px;
+            overflow: auto;
+            border: 1px solid #eee;
+            min-height: 300px;
+        }
+        #output span {
+            display: inline-block;
+            width: 1em;
+            height: 1em;
+            border-radius: 50%;
+            line-height: 1;
+            font-size: inherit;
+        }
+        #preview-canvas {
+            border: 1px solid #eee;
+            border-radius: 12px;
+            background: white;
+            max-width: 100%;
+            height: auto;
+            image-rendering: pixelated;
+        }
+        .pixel-grid {
+            position: relative;
+            border: 1px solid #eee;
+            border-radius: 12px;
+            background: white;
+            overflow: hidden;
+        }
+        .pixel-grid canvas {
+            display: block;
+        }
+        .grid-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            pointer-events: none;
+        }
+        .button {
+            background: #1890ff;
+            color: white;
+            border: none;
+            padding: 12px 30px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 1em;
+            font-weight: 500;
+            transition: all 0.3s ease;
+            box-shadow: 0 2px 8px rgba(24,144,255,0.2);
+        }
+        .button:hover {
+            background: #40a9ff;
+            transform: translateY(-1px);
+            box-shadow: 0 4px 12px rgba(24,144,255,0.3);
+        }
+        .button:disabled {
+            background: #bbb;
+            cursor: not-allowed;
+            transform: none;
+            box-shadow: none;
+        }
+        .color-preview {
+            margin: 30px 0;
+            padding: 25px;
+            background: white;
+            border-radius: 12px;
+            border: 1px solid #eee;
+        }
+        .color-preview h3 {
+            margin: 0 0 20px 0;
+            color: #333;
+            font-size: 1.2em;
+        }
+        #colorList {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
+            gap: 12px;
+        }
+        .color-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 6px 8px;
+            border-radius: 8px;
+            background: #f8f9fa;
+            transition: all 0.2s ease;
+            font-size: 0.9em;
+        }
+        .color-item:hover {
+            background: #f0f2f5;
+            transform: translateY(-1px);
+        }
+        .color-dot {
+            width: 18px;
+            height: 18px;
+            border-radius: 50%;
+            border: 2px solid #fff;
+            box-shadow: 0 0 0 1px rgba(0,0,0,0.1);
+            display: inline-block;
+            vertical-align: middle;
+        }
+        .error {
+            color: #ff4d4f;
+            margin: 10px 0;
+            font-size: 0.9em;
+        }
+        .disclaimer {
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 8px;
+            margin: -20px 0 30px 0;
+            font-size: 0.9em;
+            color: #666;
+            border: 1px solid #eee;
+            text-align: center;
+        }
+        .disclaimer p {
+            margin: 5px 0;
+        }
+        .disclaimer p:last-child {
+            color: #999;
+            font-size: 0.85em;
+        }
+        input[type="range"] {
+            width: 100%;
+            padding: 12px 0;
+            background: transparent;
+            -webkit-appearance: none;
+            margin: 10px 0;
+        }
+        input[type="range"]:focus {
+            outline: none;
+        }
+        input[type="range"]::-webkit-slider-runnable-track {
+            width: 100%;
+            height: 4px;
+            cursor: pointer;
+            background: #ddd;
+            border-radius: 2px;
+        }
+        input[type="range"]::-webkit-slider-thumb {
+            height: 16px;
+            width: 16px;
+            border-radius: 50%;
+            background: #1890ff;
+            cursor: pointer;
+            -webkit-appearance: none;
+            margin-top: -6px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            transition: all 0.3s ease;
+        }
+        input[type="range"]::-webkit-slider-thumb:hover {
+            transform: scale(1.1);
+            box-shadow: 0 2px 6px rgba(24,144,255,0.2);
+        }
+        .size-value {
+            text-align: center;
+            color: #666;
+            font-size: 0.9em;
+            margin-top: 5px;
+        }
+        .loading-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(255, 255, 255, 0.9);
+            display: none;
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+        }
+        .loading-spinner {
+            width: 50px;
+            height: 50px;
+            border: 3px solid #f3f3f3;
+            border-top: 3px solid #1890ff;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        .status-message {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            padding: 15px 25px;
+            border-radius: 8px;
+            color: white;
+            font-weight: 500;
+            display: none;
+            animation: slideIn 0.3s ease;
+            z-index: 1001;
+        }
+        .status-message.error {
+            background: #ff4d4f;
+        }
+        .status-message.success {
+            background: #52c41a;
+        }
+        @keyframes slideIn {
+            from { transform: translateX(100%); opacity: 0; }
+            to { transform: translateX(0); opacity: 1; }
+        }
+        .loading-content {
+            text-align: center;
+            color: #666;
+        }
+        .loading-progress {
+            width: 300px;
+            height: 4px;
+            background: #f0f0f0;
+            border-radius: 2px;
+            margin: 15px auto;
+            overflow: hidden;
+        }
+        .loading-progress-bar {
+            height: 100%;
+            width: 0;
+            background: #1890ff;
+            transition: width 0.3s ease;
+        }
+        .loading-text {
+            font-size: 14px;
+            margin-top: 10px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>拼豆豆像素点生成器</h1>
+        <div class="disclaimer">
+            <p>免责声明：本工具仅供作者本人使用，请勿用于商业用途。使用本工具生成的图案请遵守相关知识产权法律法规。</p>
+            <p>Copyright © 2025 袁春 All Rights Reserved.</p>
+            <p>邮箱：yuanch824@163.com/yuanch824@Gmail.com</p>
+        </div>
+        <div class="loading-overlay">
+            <div class="loading-content">
+                <div class="loading-spinner"></div>
+                <div class="loading-progress">
+                    <div class="loading-progress-bar"></div>
+                </div>
+                <div class="loading-text">处理中...</div>
+            </div>
+        </div>
+        <div class="status-message"></div>
+        <div class="upload-container">
+            <input type="file" id="upload" accept="image/*">
+            <div id="error" class="error"></div>
+        </div>
+        <div class="controls">
+            <div class="control-group">
+                <label for="pixelSize">最大图案尺寸</label>
+                <input type="range" id="pixelSize" value="50" min="20" max="120" step="1">
+                <div class="size-value"><span id="pixelSizeValue">50</span> 像素</div>
+            </div>
+            <div class="control-group">
+                <label for="colorPalette">颜色方案</label>
+                <select id="colorPalette" class="select">
+                    <option value="12">12色基础版</option>
+                    <option value="24">24色进阶版</option>
+                    <option value="48">48色专业版</option>
+                    <option value="72">72色高级版</option>
+                    <option value="128">128色终极版</option>
+                </select>
+            </div>
+        </div>
+        
+        <div class="color-preview">
+            <h3>可用颜色：</h3>
+            <div id="colorList"></div>
+        </div>
+
+        <div class="result-container">
+            <div id="output"></div>
+            <div class="pixel-grid">
+                <canvas id="preview-canvas"></canvas>
+                <canvas id="grid-canvas" class="grid-overlay"></canvas>
+            </div>
+        </div>
+        
+        <div style="text-align: center; margin-top: 20px;">
+            <button id="downloadBtn" class="button" disabled>下载图片</button>
+        </div>
+    </div>
+
+    <script src="./index.js"></script>
+     
+    </script>
+</body>
+</html>
